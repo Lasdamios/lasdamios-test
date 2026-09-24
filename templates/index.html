@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Search Scraper</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #333; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        input[type="text"] { flex: 1; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 20px; font-size: 16px; background-color: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:disabled { background-color: #ccc; }
+        .download-group { display: none; gap: 10px; margin-top: 15px; }
+        .btn-download-json { background-color: #28a745; }
+        .btn-download-csv { background-color: #17a2b8; }
+        .result-item { border-bottom: 1px solid #eee; padding: 15px 0; }
+        .result-title { font-size: 18px; color: #1a0dab; text-decoration: none; }
+        .result-title:hover { text-decoration: underline; }
+        .result-url { font-size: 14px; color: #006621; margin: 3px 0; }
+        .result-snippet { font-size: 14px; color: #545454; }
+        #loading { display: none; margin: 20px 0; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>Vyhledávač Google</h1>
+    
+    <!-- Vstupní pole dle bodu 1 a 2 zadání -->
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Zadejte klíčové slovo..." onkeypress="if(event.key==='Enter') performSearch()">
+        <button id="searchBtn" onclick="performSearch()">Vyhledat</button>
+    </div>
+
+    <div id="loading">Vyhledávám na Google...</div>
+
+    <!-- Tlačítka pro stažení výsledků (JSON i CSV) -->
+    <div id="downloadGroup" class="download-group">
+        <button class="btn-download-json" onclick="downloadJSON()">Stáhnout JSON</button>
+        <button class="btn-download-csv" onclick="downloadCSV()">Stáhnout CSV</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        let currentResults = [];
+
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return alert('Zadejte prosím hledaný výraz.');
+
+            const loading = document.getElementById('loading');
+            const resultsDiv = document.getElementById('results');
+            const downloadGroup = document.getElementById('downloadGroup');
+            const searchBtn = document.getElementById('searchBtn');
+
+            loading.style.display = 'block';
+            resultsDiv.innerHTML = '';
+            downloadGroup.style.display = 'none';
+            searchBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                });
+
+                const data = await response.json();
+                currentResults = data.results || [];
+
+                if (currentResults.length === 0) {
+                    resultsDiv.innerHTML = '<p>Nebyly nalezeny žádné výsledky.</p>';
+                } else {
+                    currentResults.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'result-item';
+                        div.innerHTML = `
+                            <a class="result-title" href="${item.link}" target="_blank">${item.title}</a>
+                            <div class="result-url">${item.link}</div>
+                            <div class="result-snippet">${item.snippet}</div>
+                        `;
+                        resultsDiv.appendChild(div);
+                    });
+                    downloadGroup.style.display = 'flex';
+                }
+            } catch (error) {
+                alert('Chyba při komunikaci se serverem.');
+            } finally {
+                loading.style.display = 'none';
+                searchBtn.disabled = false;
+            }
+        }
+
+        // Stažení ve formátu JSON
+        function downloadJSON() {
+            if (currentResults.length === 0) return;
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentResults, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "vysledky_vyhledavani.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        // Stažení ve formátu CSV
+        function downloadCSV() {
+            if (currentResults.length === 0) return;
+
+            const headers = ["Titulek", "URL", "Popis"];
+            const escapeCSV = (str) => `"${(str || '').replace(/"/g, '""')}"`;
+
+            // \uFEFF zajistí správné kódování české diakritiky v Excelu (UTF-8 BOM)
+            let csvContent = "\uFEFF" + headers.map(escapeCSV).join(",") + "\n";
+
+            currentResults.forEach(item => {
+                const row = [
+                    escapeCSV(item.title),
+                    escapeCSV(item.link),
+                    escapeCSV(item.snippet)
+                ];
+                csvContent += row.join(",") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", url);
+            downloadAnchor.setAttribute("download", "vysledky_vyhledavani.csv");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
