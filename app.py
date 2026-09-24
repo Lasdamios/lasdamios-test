@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, request, jsonify
 from scraper import search_google
 
@@ -5,12 +6,10 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    # Načte HTML rozhraní
     return render_template("index.html")
 
 @app.route("/api/search", methods=["POST"])
 def api_search():
-    # Přijme klíčové slovo z frontendu a vrátí nalezené výsledky
     data = request.get_json()
     query = data.get("query", "").strip()
     
@@ -21,4 +20,6 @@ def api_search():
     return jsonify({"results": results})
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    # Render automaticky předává port v proměnné prostředí PORT (případně použije 5000 pro lokální vývoj)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
