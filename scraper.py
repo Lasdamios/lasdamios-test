@@ -1,7 +1,6 @@
 from serpapi import GoogleSearch
 
-# Sem vložte váš API klíč ze serpapi.com
-API_KEY = "fc1076ff5d9b479c2fad5d28394ce711b3b801da16d8370e1363d2fe660b10e6"
+API_KEY = "eebcfc5ba39c3d189139ea8ad9048fd274483a415e3dbe2bd7f86f072a7a2c3a"
 
 def search_google(query):
     params = {
