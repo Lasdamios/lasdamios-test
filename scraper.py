@@ -1,9 +1,13 @@
 from serpapi import GoogleSearch
 
-# Sem vložte váš API klíč ze serpapi.com
-API_KEY = "fc1076ff5d9b479c2fad5d28394ce711b3b801da16d8370e1363d2fe660b10e6"
-
 def search_google(query):
+    # Načte klíč 
+    api_key = os.environ.get("SERPAPI_KEY")
+    
+    if not api_key:
+        print("Chyba: SERPAPI_KEY není nastaven!")
+        return []
+
     params = {
         "engine": "google",
         "q": query,
