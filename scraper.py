@@ -1,7 +1,11 @@
+import os
+from dotenv import load_dotenv
 from serpapi import GoogleSearch
 
+# Načte proměnné ze souboru .env
+load_dotenv()
+
 def search_google(query):
-    # Načte klíč 
     api_key = os.environ.get("SERPAPI_KEY")
     
     if not api_key:
@@ -9,44 +13,26 @@ def search_google(query):
         return []
 
     params = {
-        "engine": "google",
         "q": query,
+        "engine": "google",
+        "api_key": api_key,
         "hl": "cs",
-        "gl": "cz",
-        "api_key": API_KEY
+        "gl": "cz"
     }
 
     try:
         search = GoogleSearch(params)
-        results_json = search.get_dict()
-        
-        # Vytáhneme organické výsledky vyhledávání
-        organic_results = results_json.get("organic_results", [])
-        
-        formatted_results = []
+        results = search.get_dict()
+        organic_results = results.get("organic_results", [])
+
+        output = []
         for item in organic_results:
-            formatted_results.append({
+            output.append({
                 "title": item.get("title", ""),
                 "link": item.get("link", ""),
                 "snippet": item.get("snippet", "")
             })
-            
-        return formatted_results
-
+        return output
     except Exception as e:
-        print(f"Chyba při komunikaci s API: {e}")
+        print(f"Chyba při vyhledávání: {e}")
         return []
-
-if __name__ == "__main__":
-    test_query = "INIZIO Internet Media"
-    print(f"Vyhledávám přes SerpAPI: '{test_query}'...\n")
-    data = search_google(test_query)
-    
-    if not data:
-        print("Nenalezeny žádné výsledky nebo chybí API klíč.")
-    else:
-        for idx, item in enumerate(data, 1):
-            print(f"{idx}. {item['title']}")
-            print(f"   URL: {item['link']}")
-            print(f"   Popis: {item['snippet'][:100]}...")
-            print("-" * 40)
